@@ -122,7 +122,7 @@ if df is not None:
     st.subheader("🔧 Model Parameters")
     
     if model_option == "K-Nearest Neighbors":
-        n_neighbors = st.slider("Number of Neighbors (n_neighbors)", 1, 20, 3)
+        n_neighbors = st.slider("Number of Neighbors (n_neighbors)", 1, 100, 3)
         model = KNeighborsClassifier(n_neighbors=n_neighbors)
         
     else:  # Decision Tree
@@ -132,9 +132,9 @@ if df is not None:
         with col2:
             max_depth = st.slider("Max Depth", 1, 20, 5)
         with col3:
-            min_samples_split = st.slider("Min Samples Split", 2, 20, 2)
+            min_samples_split = st.slider("Min Samples Split", 2, 100, 2)
         
-        min_samples_leaf = st.slider("Min Samples Leaf", 1, 20, 1)
+        min_samples_leaf = st.slider("Min Samples Leaf", 1, 100, 1)
         
         model = DecisionTreeClassifier(
             random_state=int(random_state),
