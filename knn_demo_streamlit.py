@@ -44,6 +44,14 @@ if df is not None:
     df_display['Age_scaled'] = df_display['Age'] / 10  # Scale in tens
     df_display['Income_scaled'] = df_display['Annual_Income_IDR'] / 1_000_000  # Scale in millions
     df_display['Income in Juta'] = df_display["Income_scaled"].apply(lambda x: f'{x:,.0f} Juta')
+    df_display['Income_formatted'] = df_display['Annual_Income_IDR'].apply(lambda x: f"{x:_.0f}".replace("_", " "))
+
+    # Display sample data
+    st.header("📋 Sample Data")
+    st.write("First 10 rows of the dataset:")
+    display_df = df_display[['Age', 'Income_formatted', 'Disease_Risk']].head(10)
+    display_df.columns = ['Age', 'Annual Income (IDR)', 'Disease Risk']
+    st.dataframe(display_df)
     
     # Show scatter plot
     st.header("📈 Data Visualization")
@@ -269,13 +277,6 @@ if df is not None:
                 )
                 
                 st.plotly_chart(fig_imp, use_container_width=True)
-                
-    # Display sample data
-    with st.expander("📋 Sample Data"):
-        st.write("First 10 rows of the dataset:")
-        display_df = df_display[['Age', 'Income in Juta', 'Disease_Risk']].head(10)
-        display_df.columns = ['Age', 'Annual Income (IDR)', 'Disease Risk']
-        st.dataframe(display_df)
 
 else:
     st.error("Unable to load the dataset. Please check the file path and try again.")
