@@ -168,7 +168,7 @@ if df is not None:
         
         # Model-specific visualizations
         if model_option == "K-Nearest Neighbors":
-            st.header("🎯 KNN Decision Boundary")
+            st.header("🎯 KNN Decision Boundary on Train Data")
             
             # Always use original non-scaled data for visualization bounds
             x_min, x_max = X_train.iloc[:, 0].min() - 1, X_train.iloc[:, 0].max() + 1
@@ -228,7 +228,7 @@ if df is not None:
             st.pyplot(fig)
 
         else:  # Decision Tree
-            st.header("🌳 Decision Tree Visualization")
+            st.header("🌳 Decision Tree Visualization on Train Data")
             
             # Plot tree
             fig, ax = plt.subplots(figsize=(15, 10))
