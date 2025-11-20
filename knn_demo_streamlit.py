@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -683,28 +684,30 @@ if df is not None:
                 })
 
             # Display as styled HTML table
-            st.markdown(
-                beta_table.to_html(escape=False, index=False, classes='beta-table'),
-                unsafe_allow_html=True
-            )
-            st.markdown("""
+            html_content = f"""
             <style>
-            .beta-table {
+            .beta-table {{
                 font-size: 18px !important;
-                margin-bottom: 10px;
-            }
-            .beta-table th {
+                border-collapse: collapse !important;
+                border: 1px solid #ddd !important;
+            }}
+            .beta-table th {{
                 font-size: 18px !important;
                 font-weight: bold !important;
                 padding: 10px 15px !important;
                 text-align: left !important;
-            }
-            .beta-table td {
+                border: 1px solid #ddd !important;
+                background-color: #f8f9fa !important;
+            }}
+            .beta-table td {{
                 font-size: 18px !important;
                 padding: 10px 15px !important;
-            }
+                border: 1px solid #ddd !important;
+            }}
             </style>
-            """, unsafe_allow_html=True)
+            {beta_table.to_html(escape=False, index=False, classes='beta-table')}
+            """
+            components.html(html_content, height=210)
 
             st.markdown("---")
 
@@ -828,7 +831,7 @@ if df is not None:
 
                     st.info(f"""
                     **Note:** 
-                    - {r"$\text{Odds Ratio} = $"} {r"$\text{exp}(\beta \cdot (a - b))$"} is valid for **Logistic Regression**.
+                    - {r"$\text{Odds Ratio} = $"} {r"$\text{exp}(\beta \cdot (a - b))$"} is derived from and is valid for **Logistic Regression**.
                     - The formula assumes that all other variables in the model are held constant (i.e., have the same values when comparing scenarios {"$a$"} and {"$b$"}).
                     """)
                 else:
@@ -883,7 +886,7 @@ if df is not None:
 
                     st.info(f"""
                     **Note:** 
-                    - {r"$\text{Odds Ratio} = $"} {r"$\text{exp}(\beta \cdot (a - b))$"} is valid for **Logistic Regression**.
+                    - {r"$\text{Odds Ratio} = $"} {r"$\text{exp}(\beta \cdot (a - b))$"} is derived from and is valid for **Logistic Regression**.
                     - The formula assumes that all other variables in the model are held constant (i.e., have the same values when comparing scenarios {"$a$"} and {"$b$"}).
                     """)
 
