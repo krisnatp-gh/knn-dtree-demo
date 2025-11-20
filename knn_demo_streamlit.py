@@ -52,6 +52,15 @@ if 'logreg_conf_int' not in st.session_state:
     st.session_state.logreg_conf_int = None
 if 'logreg_llr_pvalue' not in st.session_state:
     st.session_state.logreg_llr_pvalue = None
+# Session state for tracking training parameters (for change detection)
+if 'logreg_trained_scaling' not in st.session_state:
+    st.session_state.logreg_trained_scaling = None
+if 'logreg_trained_reg_type' not in st.session_state:
+    st.session_state.logreg_trained_reg_type = None
+if 'logreg_trained_penalty' not in st.session_state:
+    st.session_state.logreg_trained_penalty = None
+if 'logreg_trained_c_value' not in st.session_state:
+    st.session_state.logreg_trained_c_value = None
 
 # Title
 st.title("🏥 Disease Risk ML Analysis")
@@ -267,6 +276,28 @@ if df is not None:
             # Unregularized - will use statsmodels
             model = None  # Will be handled separately with statsmodels
 
+        # Check if parameters have changed since last training
+        if st.session_state.logreg_trained:
+            params_changed = False
+
+            # Check scaling method
+            if st.session_state.logreg_trained_scaling != logreg_scaling:
+                params_changed = True
+
+            # Check regularization type
+            if st.session_state.logreg_trained_reg_type != regularization_type:
+                params_changed = True
+
+            # Check regularization parameters (only if both current and trained are regularized)
+            if regularization_type == "Regularized" and st.session_state.logreg_trained_reg_type == "Regularized":
+                if st.session_state.logreg_trained_penalty != penalty:
+                    params_changed = True
+                if st.session_state.logreg_trained_c_value != c_value:
+                    params_changed = True
+
+            if params_changed:
+                st.warning("⚠️ Model parameters have changed since last training. Please re-train the model to see updated results.")
+
     # Train model and show results
     if st.button("🚀 Train Model", type="primary"):
 
@@ -300,6 +331,13 @@ if df is not None:
             st.session_state.logreg_test_acc = test_accuracy
             st.session_state.logreg_conf_int = result.conf_int(alpha=0.05)
             st.session_state.logreg_llr_pvalue = result.llr_pvalue
+            # Store training parameters for change detection
+            st.session_state.logreg_trained_scaling = logreg_scaling
+            st.session_state.logreg_trained_reg_type = regularization_type
+            st.session_state.logreg_trained_penalty = None
+            st.session_state.logreg_trained_c_value = None
+            # Rerun to clear any parameter change warning
+            st.rerun()
 
         else:
             # For KNN, Decision Tree, and Regularized Logistic Regression
@@ -325,6 +363,13 @@ if df is not None:
                 st.session_state.logreg_test_acc = test_accuracy
                 st.session_state.logreg_conf_int = None  # Not available for regularized
                 st.session_state.logreg_llr_pvalue = None  # Not available for regularized
+                # Store training parameters for change detection
+                st.session_state.logreg_trained_scaling = logreg_scaling
+                st.session_state.logreg_trained_reg_type = regularization_type
+                st.session_state.logreg_trained_penalty = penalty
+                st.session_state.logreg_trained_c_value = c_value
+                # Rerun to clear any parameter change warning
+                st.rerun()
 
             # Display results for KNN and Decision Tree only
             # Logistic Regression display is handled by session state section below
@@ -413,31 +458,72 @@ if df is not None:
                          fontsize=15,
                          ax=ax)
 
+                # Format large numbers with comma separators for readability when no scaling
+                if scaling_option == "No Scaling":
+                    import re
+                    for text_obj in ax.texts:
+                        original_text = text_obj.get_text()
+
+                        def format_number(match):
+                            num_str = match.group(0)
+                            try:
+                                num = float(num_str)
+                                # Only format large numbers (likely income values)
+                                if abs(num) >= 1000:
+                                    if num == int(num):
+                                        return f"{int(num):,}"
+                                    else:
+                                        return f"{num:,.1f}"
+                            except ValueError:
+                                pass
+                            return num_str
+
+                        # Match numbers including decimals
+                        formatted_text = re.sub(r'-?\d+\.?\d*', format_number, original_text)
+                        text_obj.set_text(formatted_text)
+
                 ax.set_title("Decision Tree Structure")
                 st.pyplot(fig)
 
                 # Feature importance
                 if hasattr(model, 'feature_importances_'):
-                    st.subheader("📊 Feature Importance")
+                    st.subheader("📊 Feature Importance in Decision Tree")
                     importance_df = pd.DataFrame({
                         'Feature': ['Age', 'Annual_Income_IDR'],
                         'Importance': model.feature_importances_
                     })
 
-                    fig_imp = px.bar(importance_df, x='Feature', y='Importance',
-                                    title="Feature Importance in Decision Tree")
+                    fig_imp, ax_imp = plt.subplots(figsize=(10, 4))
 
-                                    # Update layout for better font styling
-                    fig_imp.update_layout(
-                        font=dict(color='black', size=15),  # Black font color, larger size
-                        title_font=dict(color='black', size=18),  # Title styling
-                        xaxis_title_font=dict(color='black', size=15),  # X-axis title
-                        yaxis_title_font=dict(color='black', size=15),  # Y-axis title,
-                        xaxis=dict(tickfont=dict(color='black', size=15)),
-                        yaxis=dict(tickfont=dict(color='black', size=15))
-                    )
+                    # Create horizontal bar plot with seaborn
+                    sns.barplot(data=importance_df, x='Importance', y='Feature',
+                               color='green', ax=ax_imp)
 
-                    st.plotly_chart(fig_imp, use_container_width=True)
+                    # Annotate the bars
+                    for i, (idx, row) in enumerate(importance_df.iterrows()):
+                        value = row['Importance']
+                        ax_imp.annotate(f'{value:.4f}',
+                                       xy=(value, i),
+                                       xytext=(5, 0),
+                                       textcoords='offset points',
+                                       ha='left', va='center',
+                                       fontsize=12, fontweight='bold')
+
+                    ax_imp.set_xlabel('Importance', fontsize=14)
+                    ax_imp.set_ylabel('Feature', fontsize=14)
+                    # ax_imp.set_title('Feature Importance in Decision Tree', fontsize=16)
+                    ax_imp.tick_params(labelsize=12)
+
+                    # Remove top and right spines
+                    ax_imp.spines['top'].set_visible(False)
+                    ax_imp.spines['right'].set_visible(False)
+
+                    # Adjust x-axis limit to give room for annotations
+                    xmax = ax_imp.get_xlim()[1]
+                    ax_imp.set_xlim(0, xmax * 1.15)
+
+                    plt.tight_layout()
+                    st.pyplot(fig_imp)
 
             # Regularized Logistic Regression display is handled by session state section below
 
@@ -717,13 +803,15 @@ if df is not None:
                 if cached_scaling != "No Scaling" and cached_scaler is not None:
                     st.latex(r"""
                     \begin{aligned}
-                    \text{Odds Ratio} &= \frac{\text{Odds}(X=a)}{\text{Odds}(X=b)} \\[8pt]
+                    \text{Odds Ratio} &= \frac{\text{Odds}(x_{%s}=a)}{\text{Odds}(x_{%s}=b)} \\[8pt]
                     &= \text{exp}(\beta \cdot (a_{\text{scaled}} - b_{\text{scaled}})) \\[8pt]
                     &= \text{exp}(\beta_{%s} \cdot (%s - %s)) \\[8pt]
                     &= \text{exp}(%s \cdot %s) \\[8pt]
                     &= %s
                     \end{aligned}
                     """ % (
+                        feature_display,
+                        feature_display,
                         feature_display,
                         format_number(scaled_a),
                         format_number(scaled_b),
@@ -732,6 +820,13 @@ if df is not None:
                         format_number(odds_ratio)
                     ))
                     st.caption(f":red[**Scaling applied ({cached_scaling}): a={format_number(or_a)} → {format_number(scaled_a)}, b={format_number(or_b)} → {format_number(scaled_b)}**]")
+
+
+                    st.info(f"""
+                    **Note:** 
+                    - The Odds Ratio formula shown as {r"$\text{exp}(\beta \cdot (a - b))$"} is derived from **Logistic Regression**.
+                    - The formula assumes that all other variables in the model are held constant (i.e., have the same values when comparing scenarios {"$a$"} and {"$b$"}).
+                    """)
                 else:
                     # Format values nicely for display
                     if or_feature == "Age":
@@ -765,7 +860,7 @@ if df is not None:
 
                     st.latex(r"""
                     \begin{aligned}
-                    \text{Odds Ratio} &= \frac{\text{Odds}(X=a)}{\text{Odds}(X=b)} \\[8pt]
+                    \text{Odds Ratio} &= \frac{\text{Odds}(x_{%s}=a)}{\text{Odds}(x_{%s}=b)} \\[8pt]
                     &= \text{exp}(\beta \cdot (a - b)) \\[8pt]
                     &= \text{exp}(\beta_{%s} \cdot (%s - %s)) \\[8pt]
                     &= \text{exp}(%s \cdot %s) \\[8pt]
@@ -773,12 +868,21 @@ if df is not None:
                     \end{aligned}
                     """ % (
                         feature_display,
+                        feature_display,
+                        feature_display,
                         a_display_formula,
                         b_display_formula,
                         beta_display,
                         diff_display,
                         format_number(odds_ratio)
                     ))
+
+                    st.info(f"""
+                    **Note:** 
+                    - {r"$\text{Odds Ratio} = $"} {r"$\text{exp}(\beta \cdot (a - b))$"} is derived from and is valid for **Logistic Regression**.
+                    - The formula assumes that all other variables in the model are held constant (i.e., have the same values when comparing scenarios {"$a$"} and {"$b$"}).
+                    """)
+
 
             # Interpretation text box
             st.markdown("---")
