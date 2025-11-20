@@ -591,8 +591,12 @@ if df is not None:
             st.header("📈 Likelihood Ratio (LLR) Test")
 
             st.markdown("**Hypotheses:**")
-            st.latex(r"H_0: \beta_{\text{Age}} = \beta_{\text{Annual Income}} = 0")
-            st.latex(r"H_A: \text{At least one } \beta_i \neq 0")
+            st.latex(r"""
+            \begin{aligned}
+            H_0 &: \beta_{\text{Age}} = \beta_{\text{Annual Income}} = 0 \\
+            H_A &: \text{At least one } \beta_i \neq 0
+            \end{aligned}
+            """)
 
             llr_pvalue = st.session_state.logreg_llr_pvalue
 
