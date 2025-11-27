@@ -599,70 +599,77 @@ if df is not None:
 
         # LLR and Wald tests for unregularized only
         if model_type == 'unregularized':
-            # LLR-Ratio Test
-            st.header("📈 Likelihood Ratio (LLR) Test")
+            with st.expander("📊 Statistical Tests", expanded=True):
+                tab1, tab2 = st.tabs(["LLR Test", "Wald Test"])
 
-            st.markdown("**Hypotheses:**")
-            st.latex(r"""
-            \begin{aligned}
-            H_0 &: \beta_{\text{Age}} = \beta_{\text{Annual Income}} = 0 \\
-            H_A &: \text{At least one } \beta_i \neq 0
-            \end{aligned}
-            """)
+                with tab1:
+                    # LLR-Ratio Test
+                    st.header("📈 Likelihood Ratio (LLR) Test")
 
-            llr_pvalue = st.session_state.logreg_llr_pvalue
+                    st.markdown("**Hypotheses:**")
+                    st.latex(r"""
+                    \begin{aligned}
+                    H_0 &: \beta_{\text{Age}} = \beta_{\text{Annual Income}} = 0 \\
+                    H_A &: \text{At least one } \beta_i \neq 0
+                    \end{aligned}
+                    """)
 
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("LLR Test p-value", f"{llr_pvalue:.2e}")
-            with col2:
-                if llr_pvalue < 0.05:
-                    st.success("**Conclusion:** Reject H₀ at α = 0.05. The model is statistically significant.")
-                else:
-                    st.warning("**Conclusion:** Fail to reject H₀ at α = 0.05. The model is not statistically significant.")
+                    llr_pvalue = st.session_state.logreg_llr_pvalue
 
-            # Wald Test for each coefficient
-            st.header("📊 Wald Test for Individual Coefficients")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.metric("LLR Test p-value", f"{llr_pvalue:.2e}")
+                    with col2:
+                        if llr_pvalue < 0.05:
+                            st.success("**Conclusion:** Reject H₀ at α = 0.05. The model is statistically significant.")
+                        else:
+                            st.warning("**Conclusion:** Fail to reject H₀ at α = 0.05. The model is not statistically significant.")
 
-            # Get confidence intervals from session state
-            conf_int = st.session_state.logreg_conf_int
+                with tab2:
+                    # Wald Test for each coefficient
+                    st.header("📊 Wald Test for Individual Coefficients")
 
-            # Create three columns for each coefficient
-            col1, col2, col3 = st.columns(3)
+                    # Get confidence intervals from session state
+                    conf_int = st.session_state.logreg_conf_int
 
-            param_names = ['const', 'Age', 'Annual_Income_IDR']
-            display_names = [r'$\beta_0$', r'$\beta_{\text{\Age}}$', r'$\beta_{\text{Annual Income}}$']
-            latex_names = [r'\beta_0', r'\beta_{\text{Age}}', r'\beta_{\text{Annual Income}}']
+                    # Create three columns for each coefficient
+                    col1, col2, col3 = st.columns(3)
 
-            columns = [col1, col2, col3]
+                    param_names = ['const', 'Age', 'Annual_Income_IDR']
+                    display_names = [r'$\beta_0$', r'$\beta_{\text{\Age}}$', r'$\beta_{\text{Annual Income}}$']
+                    latex_names = [r'\beta_0', r'\beta_{\text{Age}}', r'\beta_{\text{Annual Income}}']
 
-            for i, (param, display_name, latex_name, col) in enumerate(zip(param_names, display_names, latex_names, columns)):
-                with col:
-                    st.subheader(f"${latex_name}$")
+                    columns = [col1, col2, col3]
 
-                    # Beta value
-                    beta_value = cached_model.params[param]
-                    st.metric("Value", format_number(beta_value))
+                    for i, (param, display_name, latex_name, col) in enumerate(zip(param_names, display_names, latex_names, columns)):
+                        with col:
+                            st.subheader(f"${latex_name}$")
 
-                    # Hypotheses
-                    st.markdown("**Wald Test Hypotheses:**")
-                    st.latex(f"H_0: {latex_name} = 0")
-                    st.latex(f"H_A: {latex_name} \\neq 0")
+                            # Beta value
+                            beta_value = cached_model.params[param]
+                            st.metric("Value", format_number(beta_value))
 
-                    # P-value
-                    p_value = cached_model.pvalues[param]
-                    st.metric("p-value", f"{p_value:.2e}")
+                            # Hypotheses
+                            st.markdown("**Wald Test Hypotheses:**")
+                            st.latex(f"H_0: {latex_name} = 0")
+                            st.latex(f"H_A: {latex_name} \\neq 0")
 
-                    # Confidence interval
-                    ci_lower = conf_int.loc[param, 0]
-                    ci_upper = conf_int.loc[param, 1]
-                    st.metric("95% CI", format_ci(ci_lower, ci_upper))
+                            # P-value
+                            p_value = cached_model.pvalues[param]
+                            st.metric("p-value", f"{p_value:.2e}")
 
-                    # Conclusion
-                    if p_value < 0.05:
-                        st.success("Significant at α = 0.05")
-                    else:
-                        st.warning("Not significant at α = 0.05")
+                            # Confidence interval
+                            ci_lower = conf_int.loc[param, 0]
+                            ci_upper = conf_int.loc[param, 1]
+                            st.metric("95% CI", format_ci(ci_lower, ci_upper))
+
+                            # Conclusion
+                            if p_value < 0.05:
+                                st.success("Significant at α = 0.05")
+                            else:
+                                st.warning("Not significant at α = 0.05")
+
+                    components.html("<br>", height=100) # free space to write on whiteboard/zoom
         else:
             # Regularized model
             st.info("Note: Statistical tests (LLR, Wald) are only available for **unregularized logistic regression**")
