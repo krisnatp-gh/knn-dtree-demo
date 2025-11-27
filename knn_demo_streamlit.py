@@ -62,6 +62,17 @@ if 'logreg_trained_penalty' not in st.session_state:
     st.session_state.logreg_trained_penalty = None
 if 'logreg_trained_c_value' not in st.session_state:
     st.session_state.logreg_trained_c_value = None
+# Session state for odds ratio analysis
+if 'or_feature_selection' not in st.session_state:
+    st.session_state.or_feature_selection = "Age"
+if 'or_age_a' not in st.session_state:
+    st.session_state.or_age_a = 50.0
+if 'or_age_b' not in st.session_state:
+    st.session_state.or_age_b = 40.0
+if 'or_income_a' not in st.session_state:
+    st.session_state.or_income_a = 100.0
+if 'or_income_b' not in st.session_state:
+    st.session_state.or_income_b = 50.0
 
 # Title
 st.title("🏥 Disease Risk ML Analysis")
@@ -717,58 +728,76 @@ if df is not None:
             with col_input:
                 st.markdown("**Input Values:**")
 
-                # Feature selection
+                # Feature selection with explicit session state management
+                feature_options = ["Age", "Annual_Income_IDR"]
+                default_index = feature_options.index(st.session_state.or_feature_selection)
+
                 or_feature = st.selectbox(
                     "Select Feature:",
-                    ["Age", "Annual_Income_IDR"],
+                    feature_options,
+                    index=default_index,
                     key="or_feature_cached"
                 )
 
+                # Update session state when selection changes
+                if or_feature != st.session_state.or_feature_selection:
+                    st.session_state.or_feature_selection = or_feature
+
                 # Get reasonable defaults based on feature
                 if or_feature == "Age":
-                    default_a, default_b = 50.0, 40.0
                     step_val = 1.0
 
                     or_a = st.number_input(
                     "Numerator (a):",
-                    value=default_a,
+                    value=st.session_state.or_age_a,
                     step=step_val,
                     format="%.1f",
-                    key="or_a_cached"
+                    key=f"or_a_cached_{or_feature}"
                     )
 
                     or_b = st.number_input(
                         "Denominator (b):",
-                        value=default_b,
+                        value=st.session_state.or_age_b,
                         step=step_val,
                         format="%.1f",
-                        key="or_b_cached"
+                        key=f"or_b_cached_{or_feature}"
                     )
+
+                    # Update session state when values change
+                    if or_a != st.session_state.or_age_a:
+                        st.session_state.or_age_a = or_a
+                    if or_b != st.session_state.or_age_b:
+                        st.session_state.or_age_b = or_b
 
                 else:
                     # Input in millions (Juta)
-                    default_a, default_b = 100.0, 50.0
                     step_val = 1.0
-                    
+
                     # Numerator and denominator inputs with Juta in label
                     or_a_millions = st.number_input(
                         "Numerator (a) - Juta:",
-                        value=default_a,
+                        value=st.session_state.or_income_a,
                         step=step_val,
                         format="%.1f",
-                        key="or_a_cached"
+                        key=f"or_a_cached_{or_feature}"
                     )
                     st.caption("(in millions IDR)")
 
                     or_b_millions = st.number_input(
                         "Denominator (b) - Juta:",
-                        value=default_b,
+                        value=st.session_state.or_income_b,
                         step=step_val,
                         format="%.1f",
-                        key="or_b_cached"
+                        key=f"or_b_cached_{or_feature}"
                     )
                     st.caption("(in millions IDR)")
-                    
+
+                    # Update session state when values change
+                    if or_a_millions != st.session_state.or_income_a:
+                        st.session_state.or_income_a = or_a_millions
+                    if or_b_millions != st.session_state.or_income_b:
+                        st.session_state.or_income_b = or_b_millions
+
                     # Convert back to actual values
                     or_a = or_a_millions * 1e6
                     or_b = or_b_millions * 1e6
@@ -826,7 +855,16 @@ if df is not None:
                         format_number(scaled_a - scaled_b),
                         format_number(odds_ratio)
                     ))
-                    st.caption(f":red[**Scaling applied ({cached_scaling}): a={format_number(or_a)} → {format_number(scaled_a)}, b={format_number(or_b)} → {format_number(scaled_b)}**]")
+                    # Format caption based on feature type
+                    if or_feature == "Age":
+                        a_display = f"{or_a:.0f}"
+                        b_display = f"{or_b:.0f}"
+                    else:  # Annual_Income_IDR
+                        # Display in Juta (millions) for readability
+                        a_display = f"{or_a:,.0f}"
+                        b_display = f"{or_b:,.0f}"
+
+                    st.caption(f":red[**Scaling applied ({cached_scaling}): a={a_display} → {format_number(scaled_a)}, b={b_display} → {format_number(scaled_b)}**]")
 
 
                     st.info(f"""
@@ -854,11 +892,14 @@ if df is not None:
                         # Format beta coefficient - use scientific notation for very small values
                         beta_display = format_number(beta_val)
 
-                        # Split on 'e' to get mantissa and exponent
-                        mantissa, exponent = beta_display.split('e')
-                        exponent = int(exponent)  # Remove leading zeros
+                        # Only convert to LaTeX scientific notation if 'e' is present
+                        if 'e' in beta_display:
+                            # Split on 'e' to get mantissa and exponent
+                            mantissa, exponent = beta_display.split('e')
+                            exponent = int(exponent)  # Remove leading zeros
+                            beta_display = f"{mantissa} \\times 10^{{{exponent}}}"
+                        # else: keep beta_display as is (regular decimal format)
 
-                        beta_display = f"{mantissa} \\times 10^{{{exponent}}}"
                         diff_display = f"{scaled_a - scaled_b:,.0f}" # + r"\text{ Juta}"
 
                     # Calculate the product for display
