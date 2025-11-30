@@ -959,7 +959,7 @@ if df is not None:
 
                         st.info(f"""
                         **Note:**
-                        - {r"$\text{Odds Ratio} = $"} {r"$\text{exp}(\beta \cdot (a - b))$"} is derived from and is valid for **Logistic Regression**.
+                        - {r"$\text{Odds Ratio} = $"} {r"$\text{exp}(\beta \cdot (a - b))$"} is obtained from and is valid for **Logistic Regression**.
                         - The formula assumes that all other variables in the model are held constant (i.e., have the same values when comparing scenarios {"$a$"} and {"$b$"}).
                         """)
                     else:
